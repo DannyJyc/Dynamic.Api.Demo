@@ -9,6 +9,11 @@ namespace Dynamic.Api.Demo.Services
     }
     public class UsersService : IService
     {
+        /// <summary>
+        /// 新增测试
+        /// </summary>
+        /// <param name="user"></param>
+        /// <returns></returns>
         public string Create(User user)
         {
             return $"创建了：{user.Name} ";
