@@ -1,4 +1,5 @@
 ﻿using Dynamic.Api.Demo.Dynamic.Api.Core;
+using Dynamic.Api.Demo.Dynamic.Api.Core.Attributes;
 
 namespace Dynamic.Api.Demo.Services
 {
@@ -37,6 +38,12 @@ namespace Dynamic.Api.Demo.Services
         public string Update(int id, User user)
         {
             return $" ID：{id} 的名字改成了 {user.Name}";
+        }
+
+        [NonDynamicAction]
+        public string GetTest(int id)
+        {
+            return $"TEST你输入的 ID 是：{id}";
         }
     }
 }

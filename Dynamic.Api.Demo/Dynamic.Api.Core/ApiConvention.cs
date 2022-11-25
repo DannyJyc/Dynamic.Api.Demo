@@ -1,5 +1,6 @@
 ﻿
 
+using Dynamic.Api.Demo.Dynamic.Api.Core.Attributes;
 using Dynamic.Api.Demo.Dynamic.Api.Core.Helper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ActionConstraints;
@@ -46,6 +47,38 @@ namespace Dynamic.Api.Demo.Dynamic.Api.Core
                     action.ApiExplorer.IsVisible = true;
                 }
             }
+
+            foreach (var action in controller.Actions)
+            {
+                if (!CheckNoMapMethod(action))
+                    ConfigureApiExplorer(action);
+            }
+        }
+
+        private void ConfigureApiExplorer(ActionModel action)
+        {
+            if (action.ApiExplorer.IsVisible == null)
+            {
+                action.ApiExplorer.IsVisible = true;
+            }
+        }
+        /// <summary>
+        /// //不映射指定的方法
+        /// </summary>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        private bool CheckNoMapMethod(ActionModel action)
+        {
+            bool isExist = false;
+            var noMapMethod = AttributeHelper.GetSingleAttributeOrDefault<NonDynamicActionAttribute>(action.ActionMethod);
+
+            if (noMapMethod != null)
+            {
+                action.ApiExplorer.IsVisible = false;//对应的Api不映射
+                isExist = true;
+            }
+
+            return isExist;
         }
         /// <summary>
         /// 路由配置
@@ -70,9 +103,10 @@ namespace Dynamic.Api.Demo.Dynamic.Api.Core
         {
             RemoveEmptySelectors(action.Selectors);
 
-            if (action.Selectors.Count <= 0)
+            if (action.Selectors.IsNullOrEmpty() || action.Selectors.Any(a => a.ActionConstraints.IsNullOrEmpty()))
             {
-                AddApplicationServiceSelector(action);
+                if (!CheckNoMapMethod(action))
+                    AddApplicationServiceSelector(action);
             }
             else
             {
@@ -88,29 +122,31 @@ namespace Dynamic.Api.Demo.Dynamic.Api.Core
         {
             foreach (var action in controller.Actions)
             {
-                foreach (var parameter in action.Parameters)
-                {
-                    if (parameter.BindingInfo != null)
+                if (!CheckNoMapMethod(action)) {
+                    foreach (var parameter in action.Parameters)
                     {
-                        continue;
-                    }
-
-                    if (parameter.ParameterType.IsClass &&
-                        parameter.ParameterType != typeof(string) &&
-                        parameter.ParameterType != typeof(IFormFile))
-                    {
-                        var httpMethods = action.Selectors.SelectMany(temp => temp.ActionConstraints).OfType<HttpMethodActionConstraint>().SelectMany(temp => temp.HttpMethods).ToList();
-                        if (httpMethods.Contains("GET") ||
-                            httpMethods.Contains("DELETE") ||
-                            httpMethods.Contains("TRACE") ||
-                            httpMethods.Contains("HEAD"))
+                        if (parameter.BindingInfo != null)
                         {
                             continue;
                         }
 
-                        parameter.BindingInfo = BindingInfo.GetBindingInfo(new[] { new FromBodyAttribute() });
+                        if (parameter.ParameterType.IsClass &&
+                            parameter.ParameterType != typeof(string) &&
+                            parameter.ParameterType != typeof(IFormFile))
+                        {
+                            var httpMethods = action.Selectors.SelectMany(temp => temp.ActionConstraints).OfType<HttpMethodActionConstraint>().SelectMany(temp => temp.HttpMethods).ToList();
+                            if (httpMethods.Contains("GET") ||
+                                httpMethods.Contains("DELETE") ||
+                                httpMethods.Contains("TRACE") ||
+                                httpMethods.Contains("HEAD"))
+                            {
+                                continue;
+                            }
+
+                            parameter.BindingInfo = BindingInfo.GetBindingInfo(new[] { new FromBodyAttribute() });
+                        }
                     }
-                }
+                }                    
             }
         }
 
@@ -157,12 +193,6 @@ namespace Dynamic.Api.Demo.Dynamic.Api.Core
             controllerName += "s";
             routeTemplate.Append($"/{controllerName}");
 
-            // id 部分
-            if (action.Parameters.Any(temp => temp.ParameterName == "id"))
-            {
-                routeTemplate.Append("/{id}");
-            }
-
             // Action 名称部分
             var actionName = action.ActionName;
             if (actionName.EndsWith("Async"))
@@ -190,6 +220,11 @@ namespace Dynamic.Api.Demo.Dynamic.Api.Core
                 routeTemplate.Append($"/{actionName}");
             }
 
+            // id 部分
+            if (action.Parameters.Any(temp => temp.ParameterName == "id"))
+            {
+                routeTemplate.Append("/{id}");
+            }
             return routeTemplate.ToString();
         }
 
