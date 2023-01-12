@@ -1,7 +1,7 @@
 # Dynamic.Api.Demo
 
 #### 介绍
-参照ABP和Panda的动态API
+参照ABP和Panda的动态API（已同步github）
 
 #### 软件架构
 软件架构说明
